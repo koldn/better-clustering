@@ -69,6 +69,257 @@
         </div>
         <div class="slides">
             <section>
+                <h3>Кластеризация 2.0</h3>
+                <h5>Dark ages -> Bright Future</h5>
+            </section>
+            <section>
+                <h4>Начало пути</h4>
+                <img src="img/start.png"/>
+            </section>
+            <section>
+                <h2>Отчёты</h2>
+            </section>
+            <section>
+                <img src="img/reports.png"/>
+            </section>
+            <section>
+                <h2>Фоновые процессы</h2>
+            </section>
+            <section>
+                <h4>Вопрос</h4>
+                <span>А может там кластер развернем?</span>
+                <div class="fragment">
+                    <img src="img/no.gif"/>
+                </div>
+            </section>
+            <section>
+                <h3>Cluster 1.0</h3>
+                <img src="img/old-sluster.png"/>
+            </section>
+            <section>
+                <h3>Чем плох:</h3>
+                <ul>
+                    <li class="fragment">
+                        Всё взаимодействие между узлами синхронное<span class="fragment">(грех)</span>
+                    </li>
+                    <li class="fragment">
+                        Узлы используют два независимых канала связи (JGroups)
+                    </li>
+                </ul>
+            </section>
+            <section>
+                <h5>2 канала</h5>
+                <img src="img/channels.png"/>
+            </section>
+            <section>
+                <h3>"Скриптовая нода"</h3>
+            </section>
+            <section>
+                <h5>Скриптовая нода</h5>
+                <ul>
+                    <li>Выполняет фоновые процессы (почти весь JMS) и Quartz</li>
+                    <li>Один канал JGroups</li>
+                    <li>Основное событие в сети - инвалидация L2 cache Hibernate</li>
+                    <li>Ручная синхронизация метаданных</li>
+                    <li>Без "основного" приложения затихает</li>
+                </ul>
+                
+            </section>
+            <section>
+                <h5>Скриптовая нода</h5>
+                <img src="img/script-node.png"/>
+            </section>
+            <section>
+                <h5>Production launch #1</h5>
+                <div>
+                    В прайм тайм нагрузки всё стремительно заблокировалось.<br/>
+                    <span class="fragment">Беда в синхронной обработке и поведении одного протокола в JGroups</span>
+                </div>
+            </section>
+            <section>
+                <h5>JGroups.NAKACK2</h5>
+                <div>
+                    "NAKACK2 provides reliable delivery and FIFO (= First In First Out) properties for messages sent to all nodes in a cluster. "
+                </div>
+                <pre>
+                    <code class="java">
+/**
+ * Efficient way of checking whether another thread is already processing messages 
+ * from sender. If that's the case, we return immediately and let the existing thread
+ * process our message...
+ */
+protected void removeAndPassUp(...) {
+    final AtomicBoolean processing=buf.getProcessing();
+    if(!processing.compareAndSet(false, true))
+        return;
+}
+                    </code>
+                </pre>
+            </section>
+            <section>
+                <h5>JGroups.NAKACK2</h5>
+                <p>
+                    Многопоточной обработки сообщений от одного узла может и не быть!
+                </p>
+                <div class="fragment">
+                    <span>Solution</span>
+                    <pre>
+                        <code class="java">
+//Что-то будет таки синхронным                        
+if(event.isSyncEvent()){
+    doProcessMessage(event,response);
+    return;
+}
+//Оффлоад на свой executor, отпускаем поток JGroups
+executor.submit(() -&gt; doProcessMessage(event, response));                            
+                        </code>
+                    </pre>
+                </div>
+            </section>
+            <section>
+                    <h5>Production launch #2</h5>
+                    <div>
+                        Снова всё стремительно блокируется в JGroups
+                    </div>
+                    <div class="fragment">
+                        А может ну это всё? Запустим таки кластер только с инвалидацией L2 Cache?
+                        IS умеет в аснихронщину
+                    </div>
+            </section>
+            <section>
+                    <h4>Async Infinispan</h4>
+                    <span>
+                        Me: setup async invalidation
+                    </span>
+                    <br/>
+                    <span class="fragment">
+                        IS: does something synchronous
+                    </span>
+                    <br/>
+                    <span class="fragment">
+                        Me:<br/>
+                        <img src="img/tom.jpg" width="60%"/>
+                    </span>
+                </section>
+            <section>
+                <h5>JGroups.FLOW_CONTROL</h5>
+                <pre>
+                    <code class="java">
+/**
+* Simple flow control protocol based on a credit system. Each sender has a number of credits
+* (bytes to send). When the credits have been exhausted, the sender blocks. Each receiver 
+* also keeps track of
+* how many credits it has received from a sender. When credits for a sender fall below
+* a threshold, the receiver sends more credits to the sender.
+*/
+public abstract class FlowControl...  {
+    /**
+     * Max number of bytes to send per receiver until 
+     * an ack must be received before continuing sending
+     */
+    protected long max_credits=500000;
+}             
+                    </code>
+                </pre>
+            </section>
+            <section>
+                    <h5>JGroups.FLOW_CONTROL</h5>
+                    <pre>
+                        <code class="java">
+//Настройка кредитов
+flowControl.setMaxCredits("1024M");
+                        </code>
+                    </pre>
+                    <div>
+                        Отправляем события асинхронно
+                    </div>
+                    <pre>
+                        <code class="java">
+if(!event.isSyncEvent()){
+    //Оффлоад на executor
+    executor.submit(() -&gt clusterBus.sendEvent(event));
+    return;
+}
+//Что-то будет таки синхронным 
+clusterBus.sendEvent(event);    
+                        </code>
+                    </pre>
+                </section>
+            <section>
+                <h5>Production launch #3</h5>
+                <div>
+                    Всё работает! Ура! <span class="fragment">Нет =(</span>
+                    <br/>
+                    <span class="fragment">Всё периодически останавливается из-за персональных настроек пользователя</span><br>
+                    <span class="fragment">Они, внезапно, считались метаданными приложения.</span>
+                </div>
+            </section>
+            <section>
+                <h5>Production launch #4-#5</h5>
+                <div>
+                    Оптимизации и таки успешный запуск и работа по сей день.
+                </div>
+            </section>
+            <section>
+                <h4>Cluster. Bright future</h4>
+                <ul>
+                    <li class="fragment">N Fronends + M Backends</li>
+                    <li class="fragment">"Главное приложение" -> Frontend</li>
+                    <li class="fragment">"Скриптовая нода" -> Backend</li>
+                    <li class="fragment">Universal = (Frontend + Backend)</li>
+                    <li class="fragment">Sticky sessions</li>
+                </ul>
+            </section>
+            <section>
+                <h4>
+                    Один из вариантов, который вот-вот будет деплоится.
+                </h4>
+                <img src="img/cluster.png"/>
+            </section>
+            <section>
+                <h4>Всё классно<span class="fragment">, но есть JAXB</span></h4>
+                <div class="fragment">
+                    Он странный.
+                </div>
+            </section>
+            <section>
+                <h3>JAXB</h3>
+                <div>Инициализируем настройку добавленную на другом узле</div>
+                <pre>
+                    <code>
+//Object о was added on other node, here we initialize that object 
+//with integrity check
+Object o = cache.get(key)                        
+String xml = xmlUtils.toXml() //JAXB here
+if(!xml.equals(xmlFromDb))
+{ 
+    saveToDb(xml);
+}
+                    </code>
+                </pre>
+                <div class="fragment">
+                    Часто это так:
+                    <pre>
+xml.equals(xmlFromDb) == false
+                    </pre>
+                </div>
+            </section>
+            <section data-transition="fade-in slide-out" data-background-image="img/pikachu.jpg" data-background-size="contain">
+
+            </section>
+            <section>
+                <h3>Details on description tag</h3>
+            </section>
+            <section>
+                <H2>Результат</H2>
+                <ul>
+                    <li class="fragment">Асинхронное взаимодействие</li>
+                    <li class="fragment">Любое кол-во узлов</li>
+                    <li class="fragment">Балансировка нагрузки? Пожалуйста</li>
+                    <li class="fragment">Горячий резерв? Пожалуйста</li>
+                </ul>
+            </section>
+            <section>
                 Q & A
             </section>
         </div>
