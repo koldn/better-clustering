@@ -69,22 +69,75 @@
         </div>
         <div class="slides">
             <section>
-                <h3>Кластеризация 2.0</h3>
+                <h1>Кластеризация 2.0</h1>
                 <h5>Dark ages -> Bright Future</h5>
             </section>
             <section>
-                <h4>Начало пути</h4>
+                <h1>Disclaimer</h1>
+                <div>
+                    Далее будут рассмотрены проблемы одного крайне крупного клиента.
+                </div>
+            </section>
+            <section>
+                <h2>Начало. Идеальная архитектура</h2>
                 <img src="img/start.png"/>
+            </section>
+            <section>
+                <h2>Основные источники проблем</h2>
+                <ol>
+                    <li>Отчёты</li>
+                    <li>Фоновые процессы</li>
+                </ol>
             </section>
             <section>
                 <h2>Отчёты</h2>
             </section>
             <section>
+                <h4>Отчёты. Проблемы</h4>
+                <ul>
+                    <li class="fragment">Отчёты работают через планировщик, занимая поток</li>
+                    <li class="fragment">Построение отчёта 2-18 часов (в зависимости от параметров)</li>
+                    <li class="fragment">Отчёты висят в очереди долгое время, раздражая пользователей</li>
+                </ul>
+            </section>
+            <section>
+                <h1>Отчетная нода</h1>
+            </section>
+            <section>
+                <h2>Отчетная нода</h2>
+                <ul>
+                    <li class="fragment">Отдельный инстанс SMP</li>
+                    <li class="fragment">Работа по JMS</li>
+                    <li class="fragment">Работа без кешей</li>
+                    <li class="fragment">Работа с БД только на чтение</li>
+                </ul>
+            </section>
+            <section>
+                <h2>Отчетная нода.JMS</h2>
+                <ul>
+                    <li class="fragment">Очередь быстрых отчетов (~ 2ч)</li>
+                    <li class="fragment">Очередь средний отчётов (~ 6ч)</li>
+                    <li class="fragment">Очередь "Исторических" отчётов (~ 10 ч)</li>
+                    <li class="fragment">Очередь получения готовых отчётов</li>
+                </ul>
+                <div class="fragment">На каждой очереди можно настроить кол-во обработчиков</div>
+            </section>
+            <section>
+                <h2>"Отчетная нода"</h2>
                 <img src="img/reports.png"/>
             </section>
             <section>
                 <h2>Фоновые процессы</h2>
             </section>
+            <section>
+                <h2>Фоновые процессы. Проблемы</h2>
+                <ul>
+                    <li class="fragment">Большой поток входящих JMS сообщений</li>
+                    <li class="fragment">Большое кол-во обработчиков приводит к задержкам обработки запросов пользователей</li>
+                    <li class="fragment">Сервер приложений горит</li>
+                </ul>
+            </section>
+
             <section>
                 <h4>Вопрос</h4>
                 <span>А может там кластер развернем?</span>
@@ -105,6 +158,9 @@
                     <li class="fragment">
                         Узлы используют два независимых канала связи (JGroups)
                     </li>
+                    <li class="fragment">
+                        Тяжело вводить новые узлы
+                    </li>
                 </ul>
             </section>
             <section>
@@ -117,11 +173,12 @@
             <section>
                 <h5>Скриптовая нода</h5>
                 <ul>
-                    <li>Выполняет фоновые процессы (почти весь JMS) и Quartz</li>
-                    <li>Один канал JGroups</li>
-                    <li>Основное событие в сети - инвалидация L2 cache Hibernate</li>
-                    <li>Ручная синхронизация метаданных</li>
-                    <li>Без "основного" приложения затихает</li>
+                    <li class="fragment">Новый инстанс SMP</li>
+                    <li class="fragment">Выполняет фоновые процессы (почти весь JMS) и Quartz</li>
+                    <li class="fragment">Один канал JGroups</li>
+                    <li class="fragment">Основное событие в сети - инвалидация L2 cache Hibernate</li>
+                    <li class="fragment">Ручная синхронизация метаданных</li>
+                    <li class="fragment">Без "основного" приложения затихает</li>
                 </ul>
                 
             </section>
@@ -272,7 +329,7 @@ clusterBus.sendEvent(event);
             </section>
             <section>
                 <h4>
-                    Один из вариантов, который вот-вот будет деплоится.
+                    Один из вариантов, который вот-вот будет деплоиться.
                 </h4>
                 <img src="img/cluster.png"/>
             </section>
@@ -281,34 +338,39 @@ clusterBus.sendEvent(event);
                 <div class="fragment">
                     Он странный.
                 </div>
+                <div class="fragment">
+                    Или мы странные.
+                </div>
             </section>
             <section>
                 <h3>JAXB</h3>
                 <div>Инициализируем настройку добавленную на другом узле</div>
                 <pre>
-                    <code>
+                    <code class="java" data-noescape>
 //Object о was added on other node, here we initialize that object 
 //with integrity check
 Object o = cache.get(key)                        
 String xml = xmlUtils.toXml() //JAXB here
-if(!xml.equals(xmlFromDb))
+if(!xml.equals(xmlFromDb))<span class="fragment">//Порой это вычислялось в  false</span>
 { 
     saveToDb(xml);
 }
                     </code>
                 </pre>
-                <div class="fragment">
-                    Часто это так:
-                    <pre>
-xml.equals(xmlFromDb) == false
-                    </pre>
-                </div>
             </section>
             <section data-transition="fade-in slide-out" data-background-image="img/pikachu.jpg" data-background-size="contain">
 
             </section>
             <section>
                 <h3>Details on description tag</h3>
+            </section>
+            <section>
+                <h2>Индексация</h2>
+                <ul>
+                    <li class="fragment">ISDirectory - всё</li>
+                    <li class="fragment">У каждой ноды своя очередь на индексацию</li>
+                    <li class="fragment">У каждой ноды свой дисковый индекс</li>
+                </ul>
             </section>
             <section>
                 <H2>Результат</H2>
