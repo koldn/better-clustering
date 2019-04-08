@@ -362,8 +362,39 @@ if(!xml.equals(xmlFromDb))<span class="fragment">//Порой это вычис�
 
             </section>
             <section>
-                <h3>Details on description tag</h3>
+                <h2>Странность</h2>
+                <div>Одна и таже операция в разных частях приложения работает по-разному</div>
+                <div class="fragment">
+                        <pre>
+                            <code class="xml" data-noescape>
+                    &lt;!-- Сохранение настройки в БД --&gt;
+                    &lt;description lang="ru"/&gt;
+                    <span class="fragment">
+                    &lt;!-- Получение свежесохраненной настройки --&gt;
+                    &lt;description lang="ru"&gt;&lt;/description&gt;
+                                </span>
+                            </code>
+                        </pre>
+                </div>
             </section>
+            <section>
+                    <h2>Странность</h2>
+                    <div>Одна и таже операция в разных частях приложения работает по-разному</div>
+                    <div>
+                            <pre>
+                                <code class="xml" data-noescape>
+                        &lt;!-- Сохранение настройки в БД --&gt;
+                        &lt;description lang="ru"/&gt;
+                        <span class="fragment">&lt;!-- LocalizedString@12345[null,lang=ru] --&gt;</span>
+
+                        &lt;!-- Получение свежесохраненной настройки --&gt;
+                        &lt;description lang="ru"&gt;&lt;/description&gt;
+                        <span class="fragment">&lt;!-- LocalizedString@54321[lang=ru] --&gt;</span>
+                                    
+                                </code>
+                            </pre>
+                    </div>
+                </section>    
             <section>
                 <h2>Индексация</h2>
                 <ul>
