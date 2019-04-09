@@ -183,7 +183,6 @@
                     <li class="fragment">Ручная синхронизация метаданных</li>
                     <li class="fragment">Без "основного" приложения затихает</li>
                 </ul>
-                
             </section>
             <section>
                 <h5>Скриптовая нода</h5>
@@ -328,7 +327,29 @@ clusterBus.sendEvent(event);
                     <li class="fragment">"Скриптовая нода" -> Backend</li>
                     <li class="fragment">Universal = (Frontend + Backend)</li>
                     <li class="fragment">Sticky sessions</li>
+                    <li class="fragment">Гибкая настройка</li>
                 </ul>
+            </section>
+            <section>
+                <h3>Гибкая настройка</h3>
+                <pre>
+                    <code class="java">
+            //Планировщик
+            ru.naumen.cluster.node.scheduler.capable=
+
+            //Запланированные события
+            ru.naumen.cluster.node.planned.event.capable=
+
+            //Индексация
+            ru.naumen.cluster.node.indexing.capable=
+
+            //пуши
+            ru.naumen.cluster.node.pushes.capable=      
+
+            //JMS
+            ru.naumen.jmsprocessing.enabled=                 
+                    </code>
+                </pre>
             </section>
             <section>
                 <h4>
