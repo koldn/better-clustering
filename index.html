@@ -85,18 +85,23 @@
             <section>
                 <h2>Основные источники проблем</h2>
                 <ol>
-                    <li>Отчёты</li>
+                    <li>Кастомные Отчёты</li>
                     <li>Фоновые процессы</li>
                 </ol>
             </section>
             <section>
-                <h2>Отчёты</h2>
+                <h2>Кастомные Отчёты</h2>
+                <ul>
+                    <li class="fragment">Создаются обычными пользователями</li>
+                    <li class="fragment">Пользователь заполняет параметры отчёта</li>
+                    <li class="fragment">Через какое-то время готовый отчёт (файл PDF/XLSX) будет прикреплён к объекту</li>    
+                </ul>
             </section>
             <section>
-                <h4>Отчёты. Проблемы</h4>
+                <h4>Кастомные Отчёты. Проблемы</h4>
                 <ul>
                     <li class="fragment">Отчёты работают через планировщик, занимая поток</li>
-                    <li class="fragment">Построение отчёта 2-18 часов (в зависимости от параметров)</li>
+                    <li class="fragment">Построение отчёта 0-18 часов (в зависимости от параметров)</li>
                     <li class="fragment">Отчёты висят в очереди долгое время, раздражая пользователей</li>
                 </ul>
             </section>
@@ -116,7 +121,7 @@
                 <h2>Отчетная нода.JMS</h2>
                 <ul>
                     <li class="fragment">Очередь быстрых отчетов (~ 2ч)</li>
-                    <li class="fragment">Очередь средний отчётов (~ 6ч)</li>
+                    <li class="fragment">Очередь средних отчётов (~ 6ч)</li>
                     <li class="fragment">Очередь "Исторических" отчётов (~ 10 ч)</li>
                     <li class="fragment">Очередь получения готовых отчётов</li>
                     <li class="fragment">Время подобрано опытным путем</li>
@@ -129,13 +134,19 @@
             </section>
             <section>
                 <h2>Фоновые процессы</h2>
+                <ul>
+                    <li class="fragment">Оптравка уведомлений (Почта,Пуш)</li>
+                    <li class="fragment">Асинхронное выполнение "Действий По Событию"</li>
+                    <li class="fragment">Получение почты</li>
+                    <li class="fragment">Задачи в планировщике задач</li>
+                </ul>
             </section>
             <section>
                 <h2>Фоновые процессы. Проблемы</h2>
                 <ul>
                     <li class="fragment">Большой поток входящих JMS сообщений разной сложности обработки</li>
                     <li class="fragment">Большое кол-во обработчиков приводит к задержкам обработки запросов пользователей</li>
-                    <li class="fragment">Сервер приложений горит</li>
+                    <li class="fragment">Сервер приложений горит <span class="fragment">(LA 40, на 16 ядрах)</span></li>
                 </ul>
             </section>
 
@@ -143,7 +154,7 @@
                 <h4>Вопрос</h4>
                 <span>А может там кластер развернем?</span>
                 <div class="fragment">
-                    <img src="img/no.gif"/>
+                    <img src="img/no.gif" width="60%"/>
                 </div>
             </section>
             <section>
@@ -178,7 +189,7 @@
             <section>
                 <h5>Скриптовая нода</h5>
                 <ul>
-                    <li class="fragment">Новый инстанс SMP</li>
+                    <li class="fragment">Отдельный инстанс SMP</li>
                     <li class="fragment">Выполняет фоновые процессы (почти весь JMS) и Quartz</li>
                     <li class="fragment">Один канал JGroups</li>
                     <li class="fragment">Основное событие в сети - инвалидация L2 cache Hibernate</li>
@@ -221,7 +232,7 @@ protected void removeAndPassUp(...) {
             <section>
                 <h5>JGroups.NAKACK2</h5>
                 <p>
-                    Многопоточной обработки сообщений от одного узла может и не быть!
+                    Многопоточной обработки сообщений от одного узла нет!
                 </p>
                 <div class="fragment">
                     <span>Solution</span>
@@ -371,7 +382,7 @@ clusterBus.sendEvent(event);
             <section>
                 <H2>Результат</H2>
                 <ul>
-                    <li class="fragment">Синхронное взаимодействие - боль.Асинхронное взаимодействие помогает</li>
+                    <li class="fragment">Синхронное взаимодействие - боль. Асинхронное взаимодействие помогает</li>
                     <li class="fragment">Один канал синхронизации между узлами</li>
                     <li class="fragment">Любое кол-во узлов</li>
                     <li class="fragment">Балансировка нагрузки? Пожалуйста</li>
